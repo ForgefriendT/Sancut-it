@@ -138,26 +138,20 @@ document.addEventListener('DOMContentLoaded', () => {
     network.onConnected = (id) => {
         console.log('Net Ready:', id);
         if (gameMode === 'MULTI_HOST') {
-            // Generate simple 6-character alphanumeric code
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars
-            let simpleCode = '';
-            for (let i = 0; i < 6; i++) {
-                simpleCode += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            displayRoomCode = simpleCode; // Store for HUD display
-            document.getElementById('display-room-code').innerText = simpleCode;
+            // The ID itself is now the short, shareable code!
+            displayRoomCode = id;
+            document.getElementById('display-room-code').innerText = displayRoomCode;
 
-            // Update URL with full ID for sharing
+            // Update URL for sharing
             const url = new URL(window.location);
             url.searchParams.set('room', id);
-            url.searchParams.set('code', simpleCode);
             window.history.pushState({}, '', url);
 
-            // Show shareable link hint
+            // Show shareable info
             const shareHint = document.createElement('p');
             shareHint.style.fontSize = '0.8rem';
             shareHint.style.marginTop = '10px';
-            shareHint.innerHTML = 'Share this URL with friends to join!';
+            shareHint.innerHTML = `Share code <strong>${displayRoomCode}</strong> or this URL!`;
             document.getElementById('step-waiting').appendChild(shareHint);
         } else if (gameMode === 'MULTI_GUEST') {
             // Connected to own ID, now connect to Host
@@ -238,15 +232,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lobby Actions
     document.getElementById('btn-create-room').onclick = () => {
         gameMode = 'MULTI_HOST';
-        network.init();
+        // Generate a short, custom Peer ID that users can type
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let customId = '';
+        for (let i = 0; i < 8; i++) {
+            customId += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        network.init(customId); // Use custom ID instead of auto-generated UUID
         step(ui.steps[1]); // Setup Profile before waiting
     };
 
     document.getElementById('btn-join-room').onclick = () => {
         gameMode = 'MULTI_GUEST';
-        const code = document.getElementById('input-room-code').value;
+        const code = document.getElementById('input-room-code').value.trim().toUpperCase();
         if (!code) return;
-        // For now, treat input as full ID (we'll need a mapping service for real 4-digit codes)
+
+        // The code should be an 8-character room code like "K3H9W2NK"
         joinGame(code);
     };
 
@@ -318,12 +319,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check URL for Room Code (Auto-Join via shared link)
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room');
-    const displayCode = urlParams.get('code');
     if (roomId) {
         // Auto-join via shared URL
-        console.log("Auto-joining room via shared link:", displayCode || roomId);
+        console.log("Auto-joining room via shared link:", roomId);
         gameMode = 'MULTI_GUEST';
-        if (displayCode) displayRoomCode = displayCode; // Store guest code for display
+        displayRoomCode = roomId; // Store for HUD display
         joinGame(roomId);
     }
 
