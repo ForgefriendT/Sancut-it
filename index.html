@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANCUT-IT</title>
+
+    <!-- Preconnect for Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/design.css">
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Canvas (Low Res Zoomed) -->
+    <canvas id="skyCanvas" width="240" height="135"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="app-layer">
+
+        <!-- Game HUD -->
+        <div id="game-hud" class="hidden">
+            <div class="score-board">
+                <span>PILOT: <span id="hud-name">GUEST</span></span>
+                <span>KITES CUT: <span id="hud-score">0</span></span>
+                <span id="hud-timer" class="hidden" style="color:gold">TIME: 60</span>
+            </div>
+            <!-- Multiplayer Info -->
+            <div id="lobby-info" class="hidden">ROOM: <span id="room-code">----</span></div>
+            <button id="btn-exit" class="btn-pixel small" style="margin-left: 10px;">EXIT</button>
+        </div>
+
+        <!-- Notification Banner (For Secrets) -->
+        <div id="notification-banner" class="hidden">
+            <span id="notify-text">PLAYER CUT! SECRET: "I LOVE PIZZA"</span>
+        </div>
+
+        <!-- Phase 1: Main Menu -->
+        <section id="view-setup" class="view active">
+            <h1 class="title-main">SANCUT-IT</h1>
+
+            <!-- Step 0: Mode Select -->
+            <div id="step-mode" class="setup-step">
+                <button id="btn-mode-single" class="btn-pixel">SINGLE PLAYER</button>
+                <button id="btn-mode-multi" class="btn-pixel">MULTIPLAYER</button>
+
+                <!-- Leaderboard Preview -->
+                <div class="leaderboard-box">
+                    <h3>TOP PILOTS</h3>
+                    <ul id="menu-leaderboard">
+                        <li>1. ASH - 42 Kills</li>
+                        <li>2. NEO - 31 Kills</li>
+                        <li>3. YOU - <span id="local-best">0</span> Kills</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 0.5: Multiplayer Lobby -->
+            <div id="step-lobby" class="setup-step hidden">
+                <h2>MULTIPLAYER</h2>
+                <div class="row">
+                    <button id="btn-create-room" class="btn-pixel">CREATE ROOM</button>
+                </div>
+                <div class="row">
+                    <input type="text" id="input-room-code" placeholder="ROOM CODE" maxlength="6">
+                    <button id="btn-join-room" class="btn-pixel">JOIN</button>
+                </div>
+                <button id="btn-back-mode" class="btn-pixel small">
+                    < BACK</button>
+            </div>
+
+            <!-- Step 1: Identity -->
+            <div id="step-1" class="setup-step hidden">
+                <label>WHO IS FLYING?</label>
+                <input type="text" id="input-name" maxlength="10" placeholder="ENTER INITIALS">
+                <button id="btn-next-1" class="btn-pixel">NEXT ></button>
+            </div>
+
+            <!-- Step 2: Color -->
+            <div id="step-2" class="setup-step hidden">
+                <label>CHOOSE YOUR COLOR</label>
+                <div class="color-grid">
+                    <button class="color-btn" data-color="#ff9900" style="background:#ff9900"></button>
+                    <button class="color-btn" data-color="#d41c6c" style="background:#d41c6c"></button>
+                    <button class="color-btn" data-color="#76c61d" style="background:#76c61d"></button>
+                    <button class="color-btn" data-color="#008b8b" style="background:#008b8b"></button>
+                </div>
+            </div>
+
+            <!-- Step 3: Secret -->
+            <div id="step-3" class="setup-step hidden">
+                <label>SECRET MESSAGE</label>
+                <input type="text" id="input-secret" maxlength="20" placeholder="HIDDEN TRUTH...">
+                <button id="btn-start-game" class="btn-pixel is-large">LAUNCH KITE</button>
+            </div>
+
+            <!-- Lobby Waiting (Host) -->
+            <div id="step-waiting" class="setup-step hidden">
+                <label>WAITING FOR PLAYERS...</label>
+                <div class="loader">...</div>
+                <p>SHARE CODE: <strong id="display-room-code" style="font-size:2rem;color:gold">...</strong></p>
+
+                <div class="row">
+                    <label>DURATION:</label>
+                    <select id="select-duration" class="btn-pixel">
+                        <option value="60">60s</option>
+                        <option value="120">120s</option>
+                        <option value="300">5m</option>
+                    </select>
+                </div>
+
+                <button id="btn-start-multi" class="btn-pixel">START MATCH</button>
+            </div>
+
+        </section>
+
+        <!-- Phase: Game Over -->
+        <section id="view-gameover" class="view hidden">
+            <h1 class="title-fail">KITE CUT!</h1>
+            <p>You survived for <span id="final-time">0s</span>.</p>
+            <p>Kites Defeated: <span id="final-score">0</span></p>
+            <button id="btn-retry" class="btn-pixel">FLY AGAIN</button>
+        </section>
+
+        <!-- Phase: Winner (Multiplayer) -->
+        <section id="view-winner" class="view hidden">
+            <div class="winner-container">
+                <div class="winner-trophy">
+                    <div class="pixel-trophy">
+                        <!-- Trophy pixel art -->
+                        <div class="trophy-row" style="margin-bottom:2px;">
+                            <span class="trophy-pixel"
+                                style="background:#ff9900;width:6px;height:6px;display:inline-block;"></span>
+                            <span class="trophy-pixel"
+                                style="background:#ff9900;width:6px;height:6px;display:inline-block;"></span>
+                            <span class="trophy-pixel"
+                                style="background:#ff9900;width:6px;height:6px;display:inline-block;"></span>
+                        </div>
+                        <div class="trophy-row" style="margin-bottom:2px;">
+                            <span class="trophy-pixel"
+                                style="background:#ff9900;width:8px;height:8px;display:inline-block;"></span>
+                            <span class="trophy-pixel"
+                                style="background:#ffd700;width:8px;height:8px;display:inline-block;"></span>
+                            <span class="trophy-pixel"
+                                style="background:#ff9900;width:8px;height:8px;display:inline-block;"></span>
+                        </div>
+                        <div class="trophy-row" style="margin-bottom:2px;">
+                            <span class="trophy-pixel"
+                                style="background:#ff9900;width:12px;height:12px;display:inline-block;"></span>
+                        </div>
+                        <div class="trophy-row">
+                            <span class="trophy-pixel"
+                                style="background:#8B4513;width:8px;height:10px;display:inline-block;"></span>
+                        </div>
+                    </div>
+                </div>
+                <h1 style="color:gold;text-shadow:2px 2px 0px #000;">WINNER</h1>
+                <h2 id="winner-name" style="color:#fff;text-shadow:2px 2px 0px #000;">NAME</h2>
+                <p style="color:#fff;">THEIR SECRET WAS:</p>
+                <div id="winner-secret" class="winner-secret">...</div>
+
+                <div style="margin-top:20px; font-size:1rem;">
+                    <p style="color:#fff;">THE FALLEN:</p>
+                    <ul id="winner-losers" style="list-style:none;color:#fff;"></ul>
+                </div>
+
+                <button id="btn-lobby" class="btn-pixel" style="margin-top:20px">RETURN TO LOBBY</button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Watermark -->
+    <div class="watermark">
+        <div>Developed by: <strong>Fauzan Baig</strong></div>
+        <div style="margin-top:5px;font-size:0.9rem;opacity:0.8;">Thank you for playing!</div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

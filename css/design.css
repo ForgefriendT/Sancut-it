@@ -1,0 +1,247 @@
+:root {
+    /* 
+     * PALETTE: Royal India 8-Bit
+     */
+    --sky-morning-top: #639bff;
+    --sky-morning-bottom: #9ae5ff;
+    --sky-evening-top: #5e366e;
+    --sky-evening-bottom: #f28b3a;
+
+    --color-marigold: #ff9900;
+    --color-saffron: #ff6600;
+    --color-rani-pink: #d41c6c;
+    --color-peacock-teal: #008b8b;
+    --color-parrot-green: #76c61d;
+    --color-royal-blue: #1c3d9a;
+
+    --color-text-primary: #3a2212;
+    --color-text-light: #fff5e6;
+    --font-pixel: 'VT323', monospace;
+    --ease-step: steps(4);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+}
+
+body {
+    font-family: var(--font-pixel);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: none;
+    image-rendering: pixelated;
+}
+
+#skyCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    z-index: 1;
+}
+
+/* UI Overlay Override */
+#app-layer {
+    z-index: 10;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    pointer-events: none;
+    /* Let clicks pass unless on buttons */
+}
+
+/* Enable pointer events on active UI elements */
+button,
+input,
+.setup-step {
+    pointer-events: auto;
+}
+
+h1,
+h2,
+h3,
+button,
+input {
+    font-family: var(--font-pixel) !important;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.5);
+}
+
+.setup-step {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2rem;
+    border: 4px solid var(--color-text-primary);
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.color-btn {
+    width: 50px;
+    height: 50px;
+    border: 4px solid white;
+    cursor: pointer;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+}
+
+#game-hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.6);
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--color-text-primary);
+}
+
+/* Retro Button */
+button.btn-pixel {
+    background: var(--color-marigold);
+    border: 4px solid var(--color-text-primary);
+    box-shadow: 4px 4px 0px var(--color-text-primary);
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    font-size: 1.5rem;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+button.btn-pixel:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0px 0px 0px var(--color-text-primary);
+}
+
+input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 4px solid var(--color-text-primary);
+    padding: 8px;
+    font-size: 1.5rem;
+    color: var(--color-text-primary);
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.title-fail {
+    color: var(--color-rani-pink);
+    font-size: 4rem;
+    text-shadow: 4px 4px 0px #000;
+}
+
+.view {
+    z-index: 100 !important;
+    /* Ensure on top of HUD */
+}
+
+/* Winner Container */
+.winner-container {
+    background: rgba(0, 0, 0, 0.85);
+    padding: 2rem;
+    border-radius: 10px;
+    border: 4px solid var(--color-marigold);
+    box-shadow: 0 0 20px rgba(255, 153, 0, 0.5);
+}
+
+/* Winner Animation */
+.winner-trophy {
+    animation: bounce 1s infinite alternate;
+}
+
+.pixel-trophy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+.trophy-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.winner-secret {
+    color: gold;
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px gold;
+    animation: glow 2s infinite;
+}
+
+@keyframes bounce {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes glow {
+    0% {
+        opacity: 0.8;
+    }
+
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 20px gold;
+    }
+
+    100% {
+        opacity: 0.8;
+    }
+}
+
+/* Watermark */
+.watermark {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    z-index: 1000;
+    pointer-events: none;
+    font-family: var(--font-pixel);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}

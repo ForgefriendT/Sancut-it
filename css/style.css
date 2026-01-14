@@ -1,0 +1,199 @@
+/* Main Overlay Layout */
+#app-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Let clicks pass through to canvas if needed, but we'll enable pointer-events on children */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+/* Views (Sections) */
+.view {
+    position: absolute;
+    width: 100%;
+    max-width: 600px;
+    padding: var(--space-m);
+    text-align: center;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity var(--duration-flow) var(--ease-peaceful),
+        transform var(--duration-flow) var(--ease-peaceful);
+}
+
+.view.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.view.hidden {
+    pointer-events: none;
+}
+
+/* Typography Styling */
+.title-main {
+    font-size: 4rem;
+    font-weight: 900;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-l);
+    letter-spacing: 0.3em;
+    text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
+}
+
+.title-prompt {
+    font-size: 2rem;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-l);
+    font-weight: 400;
+}
+
+/* Input Styling */
+.input-wrapper {
+    position: relative;
+    border-bottom: 1px solid rgba(58, 58, 58, 0.2);
+    margin-bottom: var(--space-m);
+    transition: border-color 0.4s ease;
+}
+
+.input-wrapper:focus-within {
+    border-bottom-color: var(--color-text-primary);
+}
+
+#intention-input {
+    width: 100%;
+    font-size: 1.8rem;
+    padding: var(--space-s) 0;
+    text-align: center;
+    color: var(--color-text-primary);
+}
+
+#intention-input::placeholder {
+    color: rgba(58, 58, 58, 0.3);
+    font-style: italic;
+}
+
+.char-count {
+    position: absolute;
+    bottom: -24px;
+    right: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.input-wrapper:focus-within .char-count {
+    opacity: 1;
+}
+
+/* Buttons */
+.btn-primary {
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+    padding: 1rem 2rem;
+    border: 1px solid rgba(58, 58, 58, 0.2);
+    border-radius: 50px;
+    transition: all 0.4s var(--ease-peaceful);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+}
+
+.btn-primary:hover {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(58, 58, 58, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-text {
+    font-size: 1.2rem;
+    font-family: var(--font-serif);
+    color: var(--color-text-primary);
+    border-bottom: 1px solid transparent;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+}
+
+.btn-text.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.btn-text:hover {
+    border-bottom-color: var(--color-kite-red);
+    color: var(--color-kite-red);
+}
+
+/* Canvas Styling */
+#skyCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Sweetness Meter */
+#sweetness-meter {
+    position: absolute;
+    bottom: var(--space-m);
+    right: var(--space-m);
+    text-align: right;
+    pointer-events: auto;
+}
+
+#sweetness-meter .label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bar-track {
+    width: 120px;
+    height: 2px;
+    background: rgba(58, 58, 58, 0.1);
+    float: right;
+    position: relative;
+    overflow: hidden;
+}
+
+.bar-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0%;
+    /* Will animate */
+    background: var(--color-kite-gold);
+    transition: width 1s linear;
+}
+
+/* Title Animation */
+@keyframes titlePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 4px 8px rgba(255, 153, 0, 0.5));
+    }
+
+    50% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 6px 16px rgba(255, 153, 0, 0.8));
+    }
+}

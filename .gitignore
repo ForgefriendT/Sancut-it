@@ -1,0 +1,5 @@
+pixelated_trophy.png
+node_modules/
+.DS_Store
+*.log
+.env
