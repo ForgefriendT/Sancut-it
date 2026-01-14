@@ -77,6 +77,30 @@
                     <input type="text" id="input-room-code" placeholder="ROOM CODE" maxlength="8">
                     <button id="btn-join-room" class="btn-pixel">JOIN</button>
                 </div>
+                <style>
+                    /* Pixel Heart */
+                    .pixel-heart {
+                        display: inline-block;
+                        width: 2px;
+                        height: 2px;
+                        margin-right: 15px;
+                        /* Spacing between hearts */
+                        background: transparent;
+                        box-shadow:
+                            2px 2px #ff0000, 4px 2px #ff0000,
+                            1px 3px #ff0000, 2px 3px #ff0000, 3px 3px #ff0000, 4px 3px #ff0000, 5px 3px #ff0000,
+                            1px 4px #ff0000, 2px 4px #ff0000, 3px 4px #ff0000, 4px 4px #ff0000, 5px 4px #ff0000,
+                            2px 5px #ff0000, 3px 5px #ff0000, 4px 5px #ff0000,
+                            3px 6px #ff0000;
+                        transform: scale(2);
+                        /* Make them visible */
+                    }
+
+                    /* Utilities */
+                    .hidden {
+                        display: none !important;
+                    }
+                </style>
                 <button id="btn-back-mode" class="btn-pixel small">
                     < BACK</button>
             </div>

@@ -94,12 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Early Win Check (Host Only)
                 if (gameMode === 'MULTI_HOST' && isGameStarted) {
-                    const activePeers = Object.values(peers).filter(p => !p.dead).length;
-                    const hostAlive = !playerKite.dead;
+                    // Check lives instead of dead status (because dead=true during respawn)
+                    const activePeers = Object.values(peers).filter(p => (p.lives === undefined || p.lives > 0)).length;
+                    const hostAlive = playerKite.lives > 0;
                     const totalSurvivors = activePeers + (hostAlive ? 1 : 0);
 
                     // If only 1 survivor (and more than 1 player joined), end game
-                    // We check connectedPlayers length to ensure we don't end instantly if playing solo in a room
                     if (totalSurvivors <= 1 && Object.keys(connectedPlayers).length > 0) {
                         // Grace period to realize you won
                         if (!gameTimer) gameTimer = setTimeout(() => endMatchTimeUp(), 2000);
@@ -523,6 +523,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Just reset views
         ui.views.gameover.classList.add('hidden');
         document.getElementById('view-winner').classList.add('hidden');
+        ui.views.hud.classList.add('hidden'); // Hide HUD
+        ui.views.setup.classList.remove('hidden'); // Show Setup/Lobby
+
         step(ui.steps.waiting);
 
         showNotification("REMATCH INITIATED!");
@@ -533,10 +536,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('hud-name').innerText = playerKite.name;
         document.getElementById('hud-score').innerText = playerKite.score;
 
-        // Update Lives
-        let hearts = '';
-        for (let i = 0; i < playerKite.lives; i++) hearts += '❤️';
-        document.getElementById('hud-lives').innerText = hearts;
+        // Update Lives with Pixel Hearts
+        const livesContainer = document.getElementById('hud-lives');
+        livesContainer.innerHTML = '';
+        const safeLives = Math.max(0, playerKite.lives);
+        for (let i = 0; i < safeLives; i++) {
+            const heart = document.createElement('span');
+            heart.className = 'pixel-heart';
+            livesContainer.appendChild(heart);
+        }
 
         // Singleplayer Highscore
         if (gameMode === 'SINGLE') {
