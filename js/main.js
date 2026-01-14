@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Multiplayer State
     let peers = {}; // id -> Kite Entity
+    let connectedPlayers = {}; // id -> {name, color, secret, ready}
+    let isGameStarted = false;
+    let hostGameRunning = false; // Track if host has already started
 
     // 3. World Setup
     // Clouds
@@ -159,11 +162,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    network.onData = (data) => {
+    // New: Handle peer joins
+    network.onPeerJoin = (peerId) => {
+        console.log('Peer joined:', peerId);
+
+        if (gameMode === 'MULTI_HOST') {
+            // Host: Send current player list to new joiner
+            // Include Host in the list
+            const fullList = { ...connectedPlayers };
+            fullList[network.myId] = {
+                name: playerData.name,
+                color: playerData.color,
+                secret: playerData.secret,
+                ready: true
+            };
+
+            network.sendTo(peerId, {
+                type: 'PLAYER_LIST',
+                players: fullList,
+                gameStarted: isGameStarted
+            });
+
+            // Broadcast new player count
+            updatePlayerList();
+        } else if (gameMode === 'MULTI_GUEST') {
+            // Guest: Send my player info to host
+            network.send({
+                type: 'PLAYER_INFO',
+                name: playerData.name,
+                color: playerData.color,
+                secret: playerData.secret
+            });
+        }
+    };
+
+    // New: Handle peer disconnects
+    network.onPeerLeave = (peerId) => {
+        console.log('Peer left:', peerId);
+        delete connectedPlayers[peerId];
+
+        // Remove their kite if in game
+        if (peers[peerId]) {
+            peers[peerId].dead = true;
+            delete peers[peerId];
+        }
+
+        updatePlayerList();
+    };
+
+    network.onData = (data, senderId) => {
         if (data.type === 'UPDATE') {
             let peer = peers[data.id];
             if (!peer) {
-                peer = new PixelKite(data.x, data.y, '#ffffff');
+                // Look up color from lobby info
+                const pInfo = connectedPlayers[data.id];
+                const pColor = pInfo ? pInfo.color : '#ffffff';
+                peer = new PixelKite(data.x, data.y, pColor);
                 peer.peerId = data.id;
                 peer.isPlayer = false;
                 peers[data.id] = peer;
@@ -187,6 +241,45 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (data.type === 'START') {
             gameDuration = data.duration || 0;
             startGame();
+        } else if (data.type === 'PLAYER_INFO') {
+            // Store player info
+            connectedPlayers[senderId] = {
+                name: data.name,
+                color: data.color,
+                secret: data.secret,
+                ready: true
+            };
+            updatePlayerList();
+
+            // If host, broadcast updated player list to all
+            if (gameMode === 'MULTI_HOST') {
+                // Include Host in the list
+                const fullList = { ...connectedPlayers };
+                fullList[network.myId] = {
+                    name: playerData.name,
+                    color: playerData.color,
+                    secret: playerData.secret,
+                    ready: true
+                };
+
+                network.broadcast({
+                    type: 'PLAYER_LIST',
+                    players: fullList,
+                    gameStarted: isGameStarted
+                });
+            }
+
+        } else if (data.type === 'PLAYER_LIST') {
+            // Update local player list
+            connectedPlayers = data.players;
+            updatePlayerList();
+
+            // If game already started, join immediately
+            if (data.gameStarted && gameState !== 'PLAYING') {
+                gameDuration = 0; // No time limit for late joiners
+                startGame();
+            }
+
         } else if (data.type === 'MATCH_RESULTS') {
             showMatchResults(data.results);
         }
@@ -272,6 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.color-btn').forEach(btn => {
         btn.onclick = (e) => {
             playerData.color = e.target.dataset.color;
+            // Update list so my color/name is reflected immediately if I go back or forward
+            updatePlayerList();
             step(ui.steps[3]);
         };
     });
@@ -282,9 +377,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameMode === 'MULTI_HOST') {
             step(ui.steps.waiting);
         } else if (gameMode === 'MULTI_GUEST') {
-            showNotification("WAITING FOR HOST...");
-            step(ui.steps.waiting);
-            document.getElementById('btn-start-multi').classList.add('hidden');
+            if (hostGameRunning) {
+                // Late join implementation
+                gameDuration = 0;
+                startGame();
+            } else {
+                showNotification("WAITING FOR HOST...");
+                step(ui.steps.waiting);
+                document.getElementById('btn-start-multi').classList.add('hidden');
+            }
         } else {
             startGame();
         }
@@ -335,9 +436,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.views.hud.classList.remove('hidden');
 
         gameState = 'PLAYING';
+        isGameStarted = true; // Mark game as started for late joiners
         startTime = Date.now();
 
-        playerKite = new PlayerKite(engine.width / 2, engine.height - 50, playerData);
+        // Randomize spawn position for multiplayer (avoid clustering)
+        const spawnX = 30 + Math.random() * (engine.width - 60);
+        const spawnY = 40 + Math.random() * 60; // Upper-mid area
+        playerKite = new PlayerKite(spawnX, spawnY, playerData);
         engine.addEntity('action', playerKite);
 
         if (gameMode !== 'SINGLE') {
@@ -361,6 +466,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('sankranti_best', playerKite.score);
             }
         }
+    }
+
+    function updatePlayerList() {
+        const list = document.getElementById('player-list');
+        list.innerHTML = '';
+
+        // Add Self
+        const selfLi = document.createElement('li');
+        selfLi.style.color = playerData.color;
+        selfLi.innerText = `> ${playerData.name} (YOU)`;
+        list.appendChild(selfLi);
+
+        // Add Connected Peers (Filter out self)
+        Object.entries(connectedPlayers).forEach(([id, p]) => {
+            if (id === network.myId) return; // Skip self (already added above)
+            const li = document.createElement('li');
+            li.style.color = p.color;
+            li.innerText = `- ${p.name}`;
+            list.appendChild(li);
+        });
     }
 
     function showNotification(msg) {
@@ -411,10 +536,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Add Peers
-            Object.values(peers).forEach(p => {
+            Object.entries(peers).forEach(([id, p]) => {
+                const info = connectedPlayers[id] || {};
                 allPlayers.push({
-                    name: p.name || "Guest",
-                    secret: p.secret || "???",
+                    name: info.name || "Guest",
+                    secret: info.secret || p.secret || "???",
                     score: p.score || 0,
                     dead: p.dead || false
                 });

@@ -1,7 +1,7 @@
 export class NetworkManager {
     constructor() {
         this.peer = null;
-        this.conn = null;
+        this.connections = []; // Changed from single conn to array
         this.isHost = false;
         this.myId = null;
 
@@ -9,6 +9,8 @@ export class NetworkManager {
         this.onConnected = null;
         this.onData = null;
         this.onPeerError = null;
+        this.onPeerJoin = null; // New callback for when peer joins
+        this.onPeerLeave = null; // New callback for when peer leaves
     }
 
     init(id = null) {
@@ -24,7 +26,7 @@ export class NetworkManager {
         });
 
         this.peer.on('connection', (conn) => {
-            // Incoming connection (I am Host?)
+            // Incoming connection (I am Host)
             console.log('Incoming connection from:', conn.peer);
             this.handleConnection(conn);
         });
@@ -42,22 +44,49 @@ export class NetworkManager {
     }
 
     handleConnection(conn) {
-        this.conn = conn;
-
         conn.on('open', () => {
-            console.log('Connected to peer!');
-            // Send Hello?
+            console.log('Connected to peer:', conn.peer);
+            // Add to connections array
+            this.connections.push(conn);
+
+            // Notify about new peer
+            if (this.onPeerJoin) this.onPeerJoin(conn.peer);
+
+            // Send Hello
             conn.send({ type: 'HELLO', from: this.myId });
         });
 
         conn.on('data', (data) => {
-            if (this.onData) this.onData(data);
+            if (this.onData) this.onData(data, conn.peer);
+        });
+
+        conn.on('close', () => {
+            console.log('Peer disconnected:', conn.peer);
+            // Remove from connections
+            this.connections = this.connections.filter(c => c.peer !== conn.peer);
+            if (this.onPeerLeave) this.onPeerLeave(conn.peer);
         });
     }
 
-    send(data) {
-        if (this.conn && this.conn.open) {
-            this.conn.send(data);
+    // Broadcast to all connected peers
+    broadcast(data) {
+        this.connections.forEach(conn => {
+            if (conn.open) {
+                conn.send(data);
+            }
+        });
+    }
+
+    // Send to specific peer
+    sendTo(peerId, data) {
+        const conn = this.connections.find(c => c.peer === peerId);
+        if (conn && conn.open) {
+            conn.send(data);
         }
+    }
+
+    // Legacy send (broadcasts for backward compatibility)
+    send(data) {
+        this.broadcast(data);
     }
 }
