@@ -35,7 +35,10 @@
                 <span id="hud-timer" class="hidden" style="color:gold">TIME: 60</span>
             </div>
             <!-- Multiplayer Info -->
-            <div id="lobby-info" class="hidden">ROOM: <span id="room-code">----</span></div>
+            <div id="lobby-info" class="hidden">
+                <span id="hud-lives" style="color:red; margin-right:10px">❤️❤️❤️</span>
+                ROOM: <span id="room-code">----</span>
+            </div>
             <button id="btn-exit" class="btn-pixel small" style="margin-left: 10px;">EXIT</button>
         </div>
 
@@ -179,7 +182,11 @@
                     <ul id="winner-losers" style="list-style:none;color:#fff;"></ul>
                 </div>
 
-                <button id="btn-lobby" class="btn-pixel" style="margin-top:20px">RETURN TO LOBBY</button>
+                <div class="row" style="margin-top:20px">
+                    <button id="btn-rematch" class="btn-pixel hidden"
+                        style="margin-right:10px; background:#4CAF50;">REMATCH</button>
+                    <button id="btn-lobby" class="btn-pixel">EXIT TO LOBBY</button>
+                </div>
             </div>
         </section>
 

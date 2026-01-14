@@ -87,8 +87,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         y: playerKite.y,
                         dead: playerKite.dead,
                         score: playerKite.score,
-                        secret: playerKite.secret
+                        secret: playerKite.secret,
+                        lives: playerKite.lives // Sync lives
                     });
+                }
+
+                // Early Win Check (Host Only)
+                if (gameMode === 'MULTI_HOST' && isGameStarted) {
+                    const activePeers = Object.values(peers).filter(p => !p.dead).length;
+                    const hostAlive = !playerKite.dead;
+                    const totalSurvivors = activePeers + (hostAlive ? 1 : 0);
+
+                    // If only 1 survivor (and more than 1 player joined), end game
+                    // We check connectedPlayers length to ensure we don't end instantly if playing solo in a room
+                    if (totalSurvivors <= 1 && Object.keys(connectedPlayers).length > 0) {
+                        // Grace period to realize you won
+                        if (!gameTimer) gameTimer = setTimeout(() => endMatchTimeUp(), 2000);
+                    }
                 }
 
                 // Collisions
@@ -124,17 +139,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function die() {
         if (playerKite.dead) return;
-        playerKite.dead = true;
+
+        playerKite.lives--;
+        updateHUD();
+
         ParticleSystem.spawnExplosion(engine, playerKite.x, playerKite.y, playerKite.color, 30);
         engine.triggerShake(20);
         audio.playDie(); // SFX
 
-        // Broadcast Death
+        // Broadcast Hit/Death
         if (gameMode !== 'SINGLE') {
-            network.send({ type: 'DIED', id: network.myId, secret: playerKite.secret });
+            // Send update immediately so others see life lost
+            network.send({
+                type: 'UPDATE',
+                id: network.myId,
+                x: playerKite.x,
+                y: playerKite.y,
+                dead: playerKite.lives <= 0, // Only mark dead if 0 lives
+                score: playerKite.score,
+                secret: playerKite.secret,
+                lives: playerKite.lives
+            });
         }
 
-        endGame();
+        if (playerKite.lives > 0) {
+            // Respawn
+            playerKite.dead = true; // Temporarily hide
+            // Respawn after 3s
+            setTimeout(() => {
+                if (gameState !== 'PLAYING') return;
+                playerKite.dead = false;
+                playerKite.x = 30 + Math.random() * (engine.width - 60);
+                playerKite.y = 40 + Math.random() * 60;
+                playerKite.invulnerable = 120; // 2 seconds safety
+
+                // Reset tail?
+                playerKite.tailNodes.forEach(n => { n.x = playerKite.x; n.y = playerKite.y; });
+            }, 3000);
+
+            showNotification(`RESPAWNING... (${playerKite.lives} LIVES LEFT)`);
+        } else {
+            // Perma-death
+            playerKite.dead = true;
+            if (gameMode !== 'SINGLE') {
+                network.send({ type: 'DIED', id: network.myId, secret: playerKite.secret });
+            }
+            if (gameMode === 'SINGLE') endGame();
+            // In multiplayer, we just spectate now
+            showNotification("YOU ARE OUT! SPECTATING...");
+        }
     }
 
     // 5. Network Events
@@ -227,7 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
             peer.y = data.y;
             if (data.dead) peer.dead = true;
             if (data.dead) peer.dead = true;
-            // Also sync score/secret if present
+            if (data.score !== undefined) peer.score = data.score;
+            if (data.secret !== undefined) peer.secret = data.secret;
+            if (data.lives !== undefined) peer.lives = data.lives;
             if (data.score !== undefined) peer.score = data.score;
             if (data.secret !== undefined) peer.secret = data.secret;
 
@@ -454,10 +509,34 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHUD();
     }
 
+    function resetGameForRematch() {
+        gameState = 'WAITING';
+        isGameStarted = false;
+        gameDuration = 120; // Reset default or keep last?
+        gameTimer = 0;
+
+        // Clear entities
+        engine.layers.action = []; // Clear all kites/birds
+        peers = {}; // Rebuild peers locally? No, connection stays open.
+        // Wait, if connection stays open, we don't need to clear connectedPlayers.
+
+        // Just reset views
+        ui.views.gameover.classList.add('hidden');
+        document.getElementById('view-winner').classList.add('hidden');
+        step(ui.steps.waiting);
+
+        showNotification("REMATCH INITIATED!");
+    }
+
     function updateHUD() {
         if (!playerKite) return;
         document.getElementById('hud-name').innerText = playerKite.name;
         document.getElementById('hud-score').innerText = playerKite.score;
+
+        // Update Lives
+        let hearts = '';
+        for (let i = 0; i < playerKite.lives; i++) hearts += '❤️';
+        document.getElementById('hud-lives').innerText = hearts;
 
         // Singleplayer Highscore
         if (gameMode === 'SINGLE') {
@@ -475,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add Self
         const selfLi = document.createElement('li');
         selfLi.style.color = playerData.color;
-        selfLi.innerText = `> ${playerData.name} (YOU)`;
+        selfLi.innerText = `> ${playerData.name || "YOU"} (YOU)`;
         list.appendChild(selfLi);
 
         // Add Connected Peers (Filter out self)
@@ -483,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (id === network.myId) return; // Skip self (already added above)
             const li = document.createElement('li');
             li.style.color = p.color;
-            li.innerText = `- ${p.name}`;
+            li.innerText = `- ${p.name || "Unknown"}`;
             list.appendChild(li);
         });
     }
@@ -588,6 +667,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         audio.playWin(); // Victory sound
+
+        if (gameMode === 'MULTI_HOST') {
+            const btn = document.getElementById('btn-rematch');
+            btn.classList.remove('hidden');
+            btn.onclick = () => {
+                network.send({ type: 'REMATCH' });
+                resetGameForRematch();
+            };
+        } else {
+            document.getElementById('btn-rematch').classList.add('hidden');
+        }
     }
 
 });

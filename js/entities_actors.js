@@ -127,6 +127,7 @@ export class PlayerKite extends PixelKite {
         this.vx = 0;
         this.vy = -1;
         this.score = 0;
+        this.lives = 3; // Start with 3 lives
         this.invulnerable = 60; // Frames
     }
 
@@ -188,6 +189,12 @@ export class PlayerKite extends PixelKite {
         ctx.font = '10px VT323';
         ctx.textAlign = 'center';
         ctx.fillText(this.name, Math.floor(this.x), Math.floor(this.y) - 10);
+
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, Math.floor(this.x), Math.floor(this.y) - 10);
+
+        // Blink if invulnerable
+        if (this.invulnerable > 0 && Math.floor(Date.now() / 100) % 2 === 0) return;
 
         super.draw(ctx);
 
